@@ -21,7 +21,6 @@ services:
       - storage-backend
       - collab
     restart: unless-stopped
-
   collab:
     build:
       context: .
@@ -35,7 +34,6 @@ services:
       - "traefik.http.routers.collab.tls=true"
       - "traefik.http.services.collab.loadbalancer.server.port=80"
     restart: unless-stopped
-
   storage-backend:
     build:
       context: .
@@ -53,7 +51,6 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
-
   postgres:
     image: postgres:15-alpine
     environment:
@@ -63,6 +60,5 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
-
 volumes:
   postgres_data:
