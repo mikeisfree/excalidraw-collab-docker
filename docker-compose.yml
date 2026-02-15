@@ -1,13 +1,13 @@
 version: "3.8"
-
 services:
-  # Excalidraw frontend (budowany lokalnie)
   excalidraw:
     build:
       context: .
       dockerfile: excalidraw.Dockerfile
       args:
         VITE_APP_WS_SERVER_URL: ${VITE_APP_WS_SERVER_URL:-https://oss-collab.excalidraw.com}
+        VITE_APP_HTTP_STORAGE_BACKEND_URL: ${VITE_APP_HTTP_STORAGE_BACKEND_URL}
+        VITE_APP_STORAGE_BACKEND: http
         CACHE_INVALIDATOR: ${CACHE_INVALIDATOR:-0}
     ports:
       - "${FRONTEND_PORT:-8082}:80"
@@ -17,9 +17,11 @@ services:
       - "traefik.http.routers.excalidraw.entrypoints=websecure"
       - "traefik.http.routers.excalidraw.tls=true"
       - "traefik.http.services.excalidraw.loadbalancer.server.port=80"
+    depends_on:
+      - storage-backend
+      - collab
     restart: unless-stopped
 
-  # Collab – budujemy z source (ARM64-compatible)
   collab:
     build:
       context: .
@@ -33,3 +35,34 @@ services:
       - "traefik.http.routers.collab.tls=true"
       - "traefik.http.services.collab.loadbalancer.server.port=80"
     restart: unless-stopped
+
+  storage-backend:
+    build:
+      context: .
+      dockerfile: storage-backend.Dockerfile
+    environment:
+      STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - "${STORAGE_PORT:-8084}:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.storage.rule=Host(`${STORAGE_DOMAIN}`)"
+      - "traefik.http.routers.storage.entrypoints=websecure"
+      - "traefik.http.routers.storage.tls=true"
+      - "traefik.http.services.storage.loadbalancer.server.port=8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-excalidraw}
+      POSTGRES_USER: ${POSTGRES_USER:-excalidraw}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
