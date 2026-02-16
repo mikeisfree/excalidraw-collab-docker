@@ -15,9 +15,10 @@ ENV VITE_APP_BACKEND_V2_POST_URL=$VITE_APP_BACKEND_V2_POST_URL
 
 RUN git clone --depth 1 https://github.com/excalidraw/excalidraw.git .
 
-# Remove .env.production to prevent it from overriding our ENV vars during Vite build
-# (it hardcodes json.excalidraw.com URLs)
-RUN rm -f .env.production
+# Override only the backend URLs in .env.production (keep Firebase config etc.)
+RUN sed -i "s|VITE_APP_BACKEND_V2_GET_URL=.*|VITE_APP_BACKEND_V2_GET_URL=$VITE_APP_BACKEND_V2_GET_URL|" .env.production && \
+    sed -i "s|VITE_APP_BACKEND_V2_POST_URL=.*|VITE_APP_BACKEND_V2_POST_URL=$VITE_APP_BACKEND_V2_POST_URL|" .env.production && \
+    sed -i "s|VITE_APP_WS_SERVER_URL=.*|VITE_APP_WS_SERVER_URL=$VITE_APP_WS_SERVER_URL|" .env.production
 
 RUN yarn --network-timeout 600000
 RUN yarn build:app:docker
